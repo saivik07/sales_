@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sales Analytics Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+</head>
+
+<body class="bg-slate-100">
+
+<!-- ================= SIDEBAR ================= -->
+<aside class="fixed left-0 top-0 w-64 h-screen bg-slate-900 text-white">
+  <div class="p-6 text-xl font-bold border-b border-slate-700">
+    Sales Analytics
+  </div>
+
+  <nav class="p-4 space-y-2 text-sm">
+    <button onclick="showSection('dashboard')" class="nav-btn">
+      <i class="ph ph-gauge mr-2"></i> Dashboard
+    </button>
+    <button onclick="showSection('forecast')" class="nav-btn">
+      <i class="ph ph-chart-line mr-2"></i> Sales Forecast
+    </button>
+    <button onclick="showSection('segments')" class="nav-btn">
+      <i class="ph ph-users mr-2"></i> Customer Segments
+    </button>
+    <button onclick="showSection('product-forecast')" class="nav-btn">
+  <i class="ph ph-package mr-2"></i> Product Level
+</button>
+    <button onclick="showSection('reports')" class="nav-btn">
+      <i class="ph ph-file-text mr-2"></i> Reports
+    </button>
+    <button id="model-tab" onclick="showSection('model')" class="nav-btn">
+  <i class="ph ph-gear-six mr-2"></i> Model Management
+</button>
+    <button onclick="logout()"
+        class="w-full flex items-center text-red-500 hover:text-red-700 transition mt-auto">
+  <i class="ph ph-sign-out mr-2"></i>
+  Logout
+</button>
+  </nav>
+</aside>
+
+<!-- ================= MAIN ================= -->
+<main class="ml-64 p-8 min-h-screen">
+
+<section id="dashboard" class="section">
+
+  <!-- HEADER -->
+  <div class="flex justify-between items-center mb-6">
+  <h1 class="text-2xl font-bold">Dashboard Overview</h1>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+  
+  <div class="kpi-card hover-3d">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-gray-500">Actual Sales</p>
+        <h2 id="total-sales" class="text-2xl font-bold">$29.4M</h2>
+      </div>
+      <i class="ph ph-currency-dollar text-3xl text-blue-600"></i>
+    </div>
+  </div>
+
+  <div class="kpi-card hover-3d">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-gray-500">Total Customers</p>
+        <h2 id="total-customers" class="text-2xl font-bold">18,482</h2>
+      </div>
+      <i class="ph ph-users text-3xl text-indigo-600"></i>
+    </div>
+  </div>
+
+  <div class="kpi-card hover-3d">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-gray-500">New Customers</p>
+        <h2 id="new-customers" class="text-2xl font-bold">931</h2>
+      </div>
+      <i class="ph ph-user-plus text-3xl text-emerald-600"></i>
+    </div>
+  </div>
+
+  <div class="kpi-card hover-3d">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-gray-500">Forecast Accuracy</p>
+        <h2 id="forecast-accuracy" class="text-2xl font-bold"> </h2>
+      </div>
+      <i id="accuracy-icon" class="ph ph-trend-up text-3xl text-yellow-500"></i>
+    </div>
+  </div>
+
+</div>  
+
+    <!-- ================= FORECAST + SUMMARY ================= -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+
+      <!-- BIG FORECAST CHART -->
+      <div class="bg-white p-6 rounded-xl lg:col-span-3">
+        <h3 class="font-semibold mb-4">Sales Forecast (FY-201</h3>
+        <div class="h-[520px]">
+          <canvas id="dashboardForecastChart"></canvas>
+        </div>
+      </div>
+
+      <!-- COMPACT SUMMARY -->
+      <div class="bg-white p-6 rounded-xl">
+        <h3 class="font-semibold mb-4">Forecast Summary</h3>
+
+        <div class="grid gap-4">
+          <div class="summary-tile">
+            <p>Avg Monthly Sales</p>
+            <p id="avg-sales" class="font-bold text-lg">—</p>
+          </div>
+
+          <div class="summary-tile">
+            <p>Growth Rate</p>
+            <p id="growth-rate" class="font-bold text-lg text-green-600">—</p>
+          </div>
+
+          <div class="summary-tile">
+            <p>Best Month</p>
+            <p id="best-month" class="font-bold text-lg">—</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================= SEGMENTS ================= -->
+    <div class="bg-white p-6 rounded-xl">
+      <h3 class="font-semibold mb-4">Customer Segments</h3>
+      <div class="h-72">
+        <canvas id="dashboardSegmentChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section id="forecast" class="section hidden">
+  <h1 class="text-2xl font-bold mb-6 text-slate-800">Sales Forecast(FY-2014)</h1>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between transition-all duration-300 hover:-translate-y-2 hover:shadow-lg hover:border-blue-200 cursor-default">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Predicted Revenue</p>
+        <h3 id="total-rev-2014" class="text-2xl font-bold text-slate-900 mt-1">—</h3>
+      </div>
+      <div class="p-3 bg-blue-50 rounded-xl">
+        <i class="ph ph-money text-2xl text-blue-600"></i>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between transition-all duration-300 hover:-translate-y-2 hover:shadow-lg hover:border-emerald-200 cursor-default">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Growth vs 2013</p>
+        <h3 id="growth-pct" class="text-2xl font-bold text-emerald-600 mt-1">—</h3>
+      </div>
+      <div class="p-3 bg-emerald-50 rounded-xl">
+        <i class="ph ph-trend-up text-2xl text-emerald-600"></i>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between transition-all duration-300 hover:-translate-y-2 hover:shadow-lg hover:border-indigo-200 cursor-default">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Avg. Monthly</p>
+        <h3 id="avg-monthly-rev" class="text-2xl font-bold text-slate-900 mt-1">—</h3>
+      </div>
+      <div class="p-3 bg-indigo-50 rounded-xl">
+        <i class="ph ph-calendar text-2xl text-indigo-600"></i>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between transition-all duration-300 hover:-translate-y-2 hover:shadow-lg hover:border-orange-200 cursor-default">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Peak Month</p>
+        <h3 id="peak-month-name" class="text-2xl font-bold text-orange-600 mt-1">—</h3>
+      </div>
+      <div class="p-3 bg-orange-50 rounded-xl">
+        <i class="ph ph-crown text-2xl text-orange-600"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm mb-8">
+    <div class="relative h-[450px] w-full"> 
+      <canvas id="forecastChart"></canvas>
+    </div>
+  </div>
+
+  <div class="mt-8 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+      <div>
+        <h3 class="font-bold text-slate-800">Monthly Revenue Breakdown (2014)</h3>
+        <span class="text-xs font-medium text-slate-400 uppercase tracking-tighter">Target: $1.5M / Month</span>
+      </div>
+      <button onclick="exportForecastToCSV()" class="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 transition-colors">
+        <i class="ph ph-download-simple"></i>
+        Export CSV
+      </button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-50">
+            <th class="px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Month & Trend</th>
+            <th class="px-6 py-3 text-xs font-semibold text-slate-500 uppercase text-right">Projected Revenue</th>
+            <th class="px-6 py-3 text-xs font-semibold text-slate-500 uppercase text-right">Goal Progress</th>
+            <th class="px-6 py-3 text-xs font-semibold text-slate-500 uppercase text-right">Status</th>
+          </tr>
+        </thead>
+        <tbody id="forecast-table-body" class="divide-y divide-slate-50"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="segments" class="section hidden">
+  <h1 class="text-2xl font-bold mb-6 text-slate-800">Customer Segments</h1>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-rose-50 p-5 rounded-2xl border border-rose-100 shadow-sm transition-all hover:shadow-md">
+      <p class="text-xs font-bold text-rose-600 uppercase tracking-widest">Immediate Attention</p>
+      <h3 id="churn-count" class="text-2xl font-bold text-rose-900 mt-1">13,857</h3>
+      <p id="churn-insight-text" class="text-sm text-rose-700 mt-1">75.0% at Churn Risk</p>
+    </div>
+    <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 shadow-sm transition-all hover:shadow-md">
+      <p class="text-xs font-bold text-emerald-600 uppercase tracking-widest">Revenue Drivers</p>
+      <h3 id="high-value-count" class="text-2xl font-bold text-emerald-900 mt-1">4,178</h3>
+      <p class="text-sm text-emerald-700 mt-1">High Value segment is stable</p>
+    </div>
+    <div class="bg-blue-50 p-5 rounded-2xl border border-blue-100 shadow-sm transition-all hover:shadow-md">
+      <p class="text-xs font-bold text-blue-600 uppercase tracking-widest">Growth Potential</p>
+      <h3 id="mid-value-count" class="text-2xl font-bold text-blue-900 mt-1">412</h3>
+      <p class="text-sm text-blue-700 mt-1">Target for loyalty upgrade</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+      <h3 class="font-bold text-slate-800 mb-4">Segment Distribution</h3>
+      <div class="relative h-[350px]">
+        <canvas id="segmentChart"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100">
+        <h3 class="font-bold text-slate-800">Detailed Breakdown</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
+              <th class="px-6 py-3">Segment</th>
+              <th class="px-6 py-3 text-right">Customers</th>
+              <th class="px-6 py-3 text-right">% Total</th>
+              <th class="px-6 py-3 text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="segment-table-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="product-forecast" class="section hidden">
+  <h1 class="text-2xl font-bold mb-6 text-slate-800">Product Level Forecast</h1>
+
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Top Product (cat- Bike)</p>
+      <h3 id="top-product-name" class="text-xl font-bold text-slate-900 mt-1">BK-M68B-46</h3>
+    </div>
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Expected Revenue</p>
+      <h3 id="product-total-revenue" class="text-xl font-bold text-blue-600 mt-1">$1.5M</h3>
+    </div>
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Growth Trend</p>
+      <h3 id="product-growth" class="text-xl font-bold text-emerald-600 mt-1">24.0%</h3>
+    </div>
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Avg Monthly Sales</p>
+      <h3 id="product-avg-monthly" class="text-xl font-bold text-indigo-600 mt-1">$1,24,114</h3>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-8">
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+      <div class="relative h-[450px] w-full">
+        <canvas id="productForecastChart"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+  <div class="px-8 py-6 border-b border-slate-100">
+    <h2 class="text-xl font-bold text-slate-800">Monthly Revenue Breakdown (Forecast)</h2>
+  </div>
+  
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="text-slate-500 text-[11px] uppercase font-bold tracking-widest border-b border-slate-50">
+          <th class="px-8 py-4">Month & Trend</th>
+          <th class="px-8 py-4 text-right">Projected Revenue</th>
+          <th class="px-8 py-4 text-right">Status</th>
+        </tr>
+      </thead>
+      <tbody id="product-breakdown-body" class="divide-y divide-slate-50"></tbody>
+    </table>
+  </div>
+</div>
+</section>
+
+<section id="reports" class="section hidden">
+  <div class="max-w-5xl mx-auto space-y-8 pb-12">
+    
+    <div class="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-800">Overall Sales Report</h1>
+        <p class="text-slate-500 text-sm">Fiscal Year 2014 • Summary Analysis</p>
+      </div>
+      <button onclick="window.print()" class="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md">
+        <i class="ph ph-printer-tower"></i> Generate PDF
+      </button>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+      
+      <div class="p-10 border-b border-slate-100">
+        <h3 class="text-xs font-black text-blue-600 uppercase tracking-widest mb-4">Executive Summary</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div class="space-y-4">
+            <p class="text-slate-700 leading-relaxed">
+              The fiscal period concluded with a total revenue of <span class="font-bold text-slate-900">$29.4M</span>, representing a strong 25.56% growth compared to the previous year. Our customer base has expanded to <span class="font-bold text-slate-900">18,482 total users</span>, supported by a healthy influx of 931 new acquisitions this quarter.
+            </p>
+          </div>
+          <div class="space-y-4">
+            <p class="text-slate-700 leading-relaxed">
+              <span class="text-rose-600 font-bold underline">Critical Alert:</span> Despite revenue growth, <span class="font-bold text-slate-900">75% of our customer base</span> is currently exhibiting high-risk churn behavior. Immediate intervention is required for the 13,857 customers in the "Churn Risk" category to protect the projected $1.61M monthly run-rate.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-10 bg-slate-50/50">
+        <h3 class="text-xs font-black text-indigo-600 uppercase tracking-widest mb-6">Key Performance Indicators (Detailed)</h3>
+        
+        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 text-slate-500 uppercase text-[11px] font-bold">
+                <th class="px-6 py-4 border-b border-slate-200">Metric</th>
+                <th class="px-6 py-4 border-b border-slate-200 text-right">Actual Value</th>
+                <th class="px-6 py-4 border-b border-slate-200 text-center">Target</th>
+                <th class="px-6 py-4 border-b border-slate-200">Trend Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-sm">
+              <tr>
+                <td class="px-6 py-4">
+                  <span class="font-bold text-slate-800 block">Gross Revenue</span>
+                  <span class="text-[10px] text-slate-400">Total yearly sales</span>
+                </td>
+                <td class="px-6 py-4 text-right font-mono font-bold text-slate-900">$29,400,000</td>
+                <td class="px-6 py-4 text-center text-slate-400">$25.0M</td>
+                <td class="px-6 py-4">
+                  <span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold uppercase">Surplus</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="px-6 py-4">
+                  <span class="font-bold text-slate-800 block">Forecast Accuracy</span>
+                  <span class="text-[10px] text-slate-400">Model reliability score</span>
+                </td>
+                <td class="px-6 py-4 text-right font-mono font-bold text-slate-900">90.51%</td>
+                <td class="px-6 py-4 text-center text-slate-400">80.0%</td>
+                <td class="px-6 py-4">
+                  <span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold uppercase">Above Target</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="px-6 py-4">
+                  <span class="font-bold text-slate-800 block">Churn Risk Volume</span>
+                  <span class="text-[10px] text-slate-400">High-risk customer count</span>
+                </td>
+                <td class="px-6 py-4 text-right font-mono font-bold text-rose-600">13,857</td>
+                <td class="px-6 py-4 text-center text-slate-400">&lt; 5,000</td>
+                <td class="px-6 py-4">
+                  <span class="px-2 py-1 bg-rose-100 text-rose-700 rounded text-[10px] font-bold uppercase">Critical</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div class="p-6 bg-emerald-50 border border-emerald-100 rounded-2xl">
+    <h4 class="text-sm font-bold text-emerald-800 flex items-center gap-2 mb-2">
+      <i class="ph ph-trend-up"></i> Growth Driver: Acquisition Efficiency
+    </h4>
+    <p class="text-sm text-emerald-700 leading-relaxed">
+      With forecast accuracy improving to 90.51%, the reliability of performance projections has strengthened significantly. This quarter’s 25.56% growth rate was supported by 931 new customer acquisitions, demonstrating sustained acquisition momentum. High-value customer segments continue to contribute substantially to the $29.4M total revenue, reinforcing acquisition efficiency as a primary driver of scalable growth
+  </div>
+  
+  <div class="p-6 bg-rose-50 border border-rose-100 rounded-2xl">
+    <h4 class="text-sm font-bold text-rose-800 flex items-center gap-2 mb-2">
+      <i class="ph ph-warning-circle"></i> Risk Detail: Churn Concentration
+    </h4>
+    <p class="text-sm text-rose-700 leading-relaxed">
+      The "Critical" status of our churn risk (13,857 customers) is concentrated in mid-tier users. Without intervention, we risk losing the stability of our $1.61M monthly run-rate entering the Q1 cooldown.
+    </p>
+  </div>
+</div>
+
+<div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mt-8">
+  <div class="p-6 border-b border-slate-100 bg-slate-50">
+    <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Quarterly Action Plan</h3>
+  </div>
+  <table class="w-full text-left border-collapse">
+    <tbody class="divide-y divide-slate-100 text-sm">
+      <tr>
+        <td class="px-6 py-4 font-bold text-slate-700 w-1/3">Target: Retention</td>
+        <td class="px-6 py-4 text-slate-600">Automate win-back email sequences for the 13,857 high-risk users by the end of the month.</td>
+      </tr>
+      <tr>
+        <td class="px-6 py-4 font-bold text-slate-700 w-1/3">Target: Revenue</td>
+        <td class="px-6 py-4 text-slate-600">Allocate 40% more marketing budget to November campaigns to hit the $1.81M projected peak.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
+   <section id="model" class="section hidden">
+  <h1 class="text-2xl font-bold mb-6 text-slate-800">
+    Model Management
+  </h1>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+    <!-- LEFT CARD -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+
+      <div>
+        <h3 class="font-semibold text-slate-800 mb-2">
+          Upload New Dataset
+        </h3>
+        <input type="file" id="csvFile"
+          class="block w-full text-sm text-slate-600
+          file:mr-4 file:py-2 file:px-4
+          file:rounded-lg file:border-0
+          file:text-sm file:font-semibold
+          file:bg-blue-50 file:text-blue-700
+          hover:file:bg-blue-100"/>
+      </div>
+
+      <button onclick="uploadCSV()"
+        class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all">
+        <i class="ph ph-upload-simple"></i>
+        Upload CSV
+      </button>
+
+      <button onclick="retrainModel()"
+        class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-all">
+        <i class="ph ph-arrows-clockwise"></i>
+        Retrain Model
+      </button>
+
+    </div>
+
+    <!-- RIGHT CARD -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+
+      <h3 class="font-semibold text-slate-800">Training Status</h3>
+
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+        <p class="text-sm text-slate-500">Current Status</p>
+        <p id="model-status"
+           class="text-xl font-bold text-slate-800 mt-1">
+           Idle
+        </p>
+      </div>
+
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+        <p class="text-sm text-slate-500">Last Trained</p>
+        <p id="last-trained"
+           class="text-lg font-semibold text-slate-700 mt-1">
+           Not trained yet
+        </p>
+      </div>
+
+      <!-- Optional Loader -->
+      <div id="training-loader" class="hidden">
+        <div class="w-full bg-slate-200 rounded-full h-2">
+          <div class="bg-blue-600 h-2 rounded-full animate-pulse w-full"></div>
+        </div>
+        <p class="text-xs text-slate-500 mt-2">Training in progress...</p>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+</main>
+
+<!-- ================= STYLES ================= -->
+<style>
+.hidden { display: none; }
+
+.nav-btn {
+  width: 100%;
+  padding: 10px;
+  text-align: left;
+  border-radius: 6px;
+}
+.nav-btn:hover { background: #334155; }
+
+/* ================= 3D KPI CARDS ================= */
+
+.kpi-card {
+  background: linear-gradient(145deg, #ffffff, #f3f4f6);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+  cursor: pointer;
+}
+
+/* Hover lift */
+.kpi-card:hover {
+  box-shadow:
+    0 20px 45px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(37, 99, 235, 0.1);
+}
+
+/* Glow effect */
+.kpi-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at top left,
+    rgba(37, 99, 235, 0.15),
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.kpi-card:hover::after {
+  opacity: 1;
+}
+
+.summary-tile {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+}
+
+tr:hover {
+  background-color: #f8fafc; /* Very light slate gray */
+  transition: background-color 0.2s ease;
+}
+
+.table-progress {
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.table-progress-bar {
+  height: 100%;
+  background: #3b82f6; /* Blue-500 */
+}
+
+@media print {
+  /* Hide the header button and any other navigation during export */
+  button, .nav-btn, aside {
+    display: none !important;
+  }
+
+  /* Ensure the report takes up the full page width during export */
+  main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  .max-w-5xl {
+    max-width: 100% !important;
+  }
+}
+
+</style>
+
+<script src="script.js"></script>
+</body>
+</html>
